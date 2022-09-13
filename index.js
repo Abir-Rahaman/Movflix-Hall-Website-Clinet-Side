@@ -29,9 +29,22 @@ async function run() {
     app.post("/bookings", async (req, res) => {
        const booking = req.body;
        const query = {selectedDate : booking.selectedDate, movieName:booking.movieName}
+       const exists = await bookingCollection.findOne(query);
+       if(exists){
+        return res.send({success: false , booking:exists});
+       }
        const result =await bookingCollection.insertOne(booking);
-       res.send(result);
+       return res.send({success:true ,result});
     });
+
+    app.get('/bookings' , async (req, res) => {
+       const email = req.query.email;
+       const query = {email: email}
+       const bookings = await bookingCollection.find(query).toArray();
+       res.send(bookings);
+
+
+    })
 
 
   } finally {
