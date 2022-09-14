@@ -16,6 +16,7 @@ async function run() {
     await client.connect();
     const movieCollection = client.db("CinemaHall").collection("Movies");
     const bookingCollection = client.db("CinemaHall").collection("Bookings");
+    const googleUsersCollection = client.db("CinemaHall").collection("googleUsers");
 
     // get all movies in the collection
     app.get("/movie", async (req, res) => {
@@ -36,14 +37,26 @@ async function run() {
        const result =await bookingCollection.insertOne(booking);
        return res.send({success:true ,result});
     });
-
+   
+    // get all bookings
     app.get('/bookings' , async (req, res) => {
        const email = req.query.email;
        const query = {email: email}
        const bookings = await bookingCollection.find(query).toArray();
        res.send(bookings);
+    })
 
-
+    // get all users from google accounts
+    app.put('/user/:email' ,async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = {email :email}
+      const options = {upsert :true}
+      const updateDoc ={
+        $set: user,
+      }
+      const result = await googleUsersCollection.updateOne(filter, updateDoc, options);
+      res.send(result);
     })
 
 
