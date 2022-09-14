@@ -28,38 +28,39 @@ async function run() {
 
     // post bookings to the booking collection
     app.post("/bookings", async (req, res) => {
-       const booking = req.body;
-       const query = {selectedDate : booking.selectedDate, movieName:booking.movieName}
-       const exists = await bookingCollection.findOne(query);
-       if(exists){
-        return res.send({success: false , booking:exists});
-       }
-       const result =await bookingCollection.insertOne(booking);
-       return res.send({success:true ,result});
+      const booking = req.body;
+      const query = { selectedDate: booking.selectedDate, movieName: booking.movieName };
+      const exists = await bookingCollection.findOne(query);
+      if (exists) {
+        return res.send({ success: false, booking: exists });
+      }
+      const result = await bookingCollection.insertOne(booking);
+      return res.send({ success: true, result });
     });
-   
-    // get all bookings
-    app.get('/bookings' , async (req, res) => {
-       const email = req.query.email;
-       const query = {email: email}
-       const bookings = await bookingCollection.find(query).toArray();
-       res.send(bookings);
-    })
 
-    // get all users from google accounts
-    app.put('/user/:email' ,async (req, res) => {
+    // get all bookings
+    app.get("/bookings", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const bookings = await bookingCollection.find(query).toArray();
+      res.send(bookings);
+    });
+
+    // save all users from google accounts
+    app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
-      const filter = {email :email}
-      const options = {upsert :true}
-      const updateDoc ={
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
         $set: user,
-      }
+      };
       const result = await googleUsersCollection.updateOne(filter, updateDoc, options);
-      res.send(result);
-    })
 
+      res.send({ result });
+    });
 
+    
   } finally {
     // await client.close();
   }
