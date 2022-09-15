@@ -3,6 +3,7 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -10,6 +11,21 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@movflix.le7dwpw.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+function verifyJwt(req, res, next) {
+  const authHeaders = req.headers.authorization;
+  if (!authHeaders) {
+    return res.status(401).send({ message: "Unauthorize Access" });
+  }
+  const token = authHeaders.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden Access " });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
 async function run() {
   try {
@@ -19,7 +35,7 @@ async function run() {
     const googleUsersCollection = client.db("CinemaHall").collection("googleUsers");
 
     // get all movies in the collection
-    app.get("/movie", async (req, res) => {
+    app.get("/movie",  async (req, res) => {
       const query = {};
       const cursor = movieCollection.find(query);
       const movie = await cursor.toArray();
@@ -27,9 +43,9 @@ async function run() {
     });
 
     // post bookings to the booking collection
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", verifyJwt, async (req, res) => {
       const booking = req.body;
-      const query = { selectedDate: booking.selectedDate, movieName: booking.movieName };
+      const query = { movieName: booking.movieName, selectedDate: booking.selectedDate, email: booking.email }
       const exists = await bookingCollection.findOne(query);
       if (exists) {
         return res.send({ success: false, booking: exists });
@@ -39,11 +55,17 @@ async function run() {
     });
 
     // get all bookings
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", verifyJwt, async (req, res) => {
       const email = req.query.email;
+      const decodedEmail = req.decoded.email;
+      if(email === decodedEmail) {
       const query = { email: email };
       const bookings = await bookingCollection.find(query).toArray();
       res.send(bookings);
+      }
+      else{
+      return res.status(403).send({ message: "Forbidden Access " });
+      }
     });
 
     // save all users from google accounts
@@ -56,11 +78,10 @@ async function run() {
         $set: user,
       };
       const result = await googleUsersCollection.updateOne(filter, updateDoc, options);
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "3h" });
 
-      res.send({ result });
+      res.send({ result, token });
     });
-
-    
   } finally {
     // await client.close();
   }
