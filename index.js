@@ -91,15 +91,32 @@ async function run() {
     });
 
     // make admin api
-    app.put("/user/admin/:email", async (req, res) => {
+    app.put("/user/admin/:email", verifyJwt, async (req, res) => {
       const email = req.params.email;
-      const filter = { email: email };
-      const updateDoc = {
-        $set: { role: "admin" },
-      };
-      const result = await googleUsersCollection.updateOne(filter, updateDoc);
-      res.send({ result });
+      const requester = req.decoded.email;
+      const reqAccount = await googleUsersCollection.findOne({ email: requester });
+      if (reqAccount.role === "admin") {
+        const filter = { email: email };
+        const updateDoc = {
+          $set: { role: "admin" },
+        };
+        const result = await googleUsersCollection.updateOne(filter, updateDoc);
+        res.send({ result });
+      } else {
+        res.status(403).send({ message: "You do not have permission to edit this resource." });
+      }
     });
+
+    //  get all admin users
+    app.get('/admin/:email' , async (req,res) =>{
+      const email = req.params.email;
+      const user = await googleUsersCollection.findOne({ email: email });
+      const isAdmin = user.role === 'admin';
+      res.send({admin:isAdmin});
+    })
+
+
+
   } finally {
     // await client.close();
   }
