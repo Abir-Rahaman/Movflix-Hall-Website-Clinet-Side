@@ -36,6 +36,16 @@ async function run() {
     const googleUsersCollection = client.db("CinemaHall").collection("googleUsers");
     const MovieServer = client.db("CinemaHall").collection("New Movies");
 
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const reqAccount = await googleUsersCollection.findOne({ email: requester });
+      if (reqAccount.role === "admin") {
+        next();
+      } else {
+        return res.status(403).send({ message: "Forbidden Access " });
+      }
+    };
+
     // get all movies in the collection
     app.get("/movie", async (req, res) => {
       const query = {};
@@ -91,20 +101,14 @@ async function run() {
     });
 
     // make admin api
-    app.put("/user/admin/:email", verifyJwt, async (req, res) => {
+    app.put("/user/admin/:email", verifyJwt, verifyAdmin, async (req, res) => {
       const email = req.params.email;
-      const requester = req.decoded.email;
-      const reqAccount = await googleUsersCollection.findOne({ email: requester });
-      if (reqAccount.role === "admin") {
-        const filter = { email: email };
-        const updateDoc = {
-          $set: { role: "admin" },
-        };
-        const result = await googleUsersCollection.updateOne(filter, updateDoc);
-        res.send({ result });
-      } else {
-        res.status(403).send({ message: "You do not have permission to edit this resource." });
-      }
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await googleUsersCollection.updateOne(filter, updateDoc);
+      res.send({ result });
     });
 
     //  get all admin users
@@ -116,10 +120,15 @@ async function run() {
     });
 
     // add movie using react hook form form control and save to database
-    app.post("/doctor", async (req, res) => {
+    app.post("/doctor", verifyJwt, verifyAdmin, async (req, res) => {
       const movie = req.body;
+      const query = { MovieName: movie.MovieName };
+      const exists = await MovieServer.findOne(query);
+      if (exists) {
+        return res.send({ success: false, movie: exists });
+      }
       const result = await MovieServer.insertOne(movie);
-      res.send(result);
+      return res.send({ success: true, result });
     });
   } finally {
     // await client.close();
