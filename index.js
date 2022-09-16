@@ -14,6 +14,7 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 function verifyJwt(req, res, next) {
   const authHeaders = req.headers.authorization;
+  console.log(authHeaders);
   if (!authHeaders) {
     return res.status(401).send({ message: "Unauthorize Access" });
   }
@@ -33,9 +34,10 @@ async function run() {
     const movieCollection = client.db("CinemaHall").collection("Movies");
     const bookingCollection = client.db("CinemaHall").collection("Bookings");
     const googleUsersCollection = client.db("CinemaHall").collection("googleUsers");
+    // const visitorsCollection = client.db("CinemaHall").collection("users");
 
     // get all movies in the collection
-    app.get("/movie",  async (req, res) => {
+    app.get("/movie", async (req, res) => {
       const query = {};
       const cursor = movieCollection.find(query);
       const movie = await cursor.toArray();
@@ -43,9 +45,9 @@ async function run() {
     });
 
     // post bookings to the booking collection
-    app.post("/bookings", verifyJwt, async (req, res) => {
+    app.post("/bookings", async (req, res) => {
       const booking = req.body;
-      const query = { movieName: booking.movieName, selectedDate: booking.selectedDate, email: booking.email }
+      const query = { movieName: booking.movieName, selected: booking.selectedDate, email: booking.email };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
         return res.send({ success: false, booking: exists });
@@ -58,14 +60,19 @@ async function run() {
     app.get("/bookings", verifyJwt, async (req, res) => {
       const email = req.query.email;
       const decodedEmail = req.decoded.email;
-      if(email === decodedEmail) {
-      const query = { email: email };
-      const bookings = await bookingCollection.find(query).toArray();
-      res.send(bookings);
+      if (email === decodedEmail) {
+        const query = { email: email };
+        const bookings = await bookingCollection.find(query).toArray();
+        res.send(bookings);
+      } else {
+        return res.status(403).send({ message: "Forbidden Access " });
       }
-      else{
-      return res.status(403).send({ message: "Forbidden Access " });
-      }
+    });
+
+    // get all users
+    app.get("/user", async (req, res) => {
+      const users = await googleUsersCollection.find().toArray();
+      res.send(users);
     });
 
     // save all users from google accounts
@@ -81,6 +88,17 @@ async function run() {
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "3h" });
 
       res.send({ result, token });
+    });
+
+    // make admin api
+    app.put("/user/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await googleUsersCollection.updateOne(filter, updateDoc);
+      res.send({ result });
     });
   } finally {
     // await client.close();
