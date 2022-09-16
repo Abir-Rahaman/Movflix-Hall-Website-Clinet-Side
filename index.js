@@ -34,7 +34,7 @@ async function run() {
     const movieCollection = client.db("CinemaHall").collection("Movies");
     const bookingCollection = client.db("CinemaHall").collection("Bookings");
     const googleUsersCollection = client.db("CinemaHall").collection("googleUsers");
-    // const visitorsCollection = client.db("CinemaHall").collection("users");
+    const MovieServer = client.db("CinemaHall").collection("New Movies");
 
     // get all movies in the collection
     app.get("/movie", async (req, res) => {
@@ -108,15 +108,19 @@ async function run() {
     });
 
     //  get all admin users
-    app.get('/admin/:email' , async (req,res) =>{
+    app.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
       const user = await googleUsersCollection.findOne({ email: email });
-      const isAdmin = user.role === 'admin';
-      res.send({admin:isAdmin});
-    })
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
+    });
 
-
-
+    // add movie using react hook form form control and save to database
+    app.post("/doctor", async (req, res) => {
+      const movie = req.body;
+      const result = await MovieServer.insertOne(movie);
+      res.send(result);
+    });
   } finally {
     // await client.close();
   }
