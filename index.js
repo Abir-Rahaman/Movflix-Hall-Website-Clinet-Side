@@ -4,6 +4,7 @@ const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -118,6 +119,20 @@ async function run() {
       const isAdmin = user.role === "admin";
       res.send({ admin: isAdmin });
     });
+
+    // payment system integration
+    app.post("/create-payment-intent", verifyJwt, async  (req, res) => {
+      const service = req.body;
+      const price = service.price;
+      const amount = price*100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types:[card]
+      });
+      res.send({clientSecret: paymentIntent.client_secret})
+
+    })
 
     // add movie using react hook form form control and save to database
     app.post("/doctor", verifyJwt, verifyAdmin, async (req, res) => {
