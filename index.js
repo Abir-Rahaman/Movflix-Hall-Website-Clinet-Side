@@ -1,9 +1,9 @@
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const app = express();
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const app = express();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
@@ -58,7 +58,7 @@ async function run() {
     // post bookings to the booking collection
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
-      const query = { movieName: booking.movieName, selected: booking.selectedDate, email: booking.email };
+      const query = { movieName: booking.movieName, selected: booking.selectedDate, email: booking.email ,ticketPrice:booking.ticketPrice };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
         return res.send({ success: false, booking: exists });
@@ -121,19 +121,18 @@ async function run() {
     });
 
     // payment system integration
-    app.post("/create-payment-intent", verifyJwt, async  (req, res) => {
+    app.post("/create-payment-intent", async (req, res) => {
       const service = req.body;
-      const price = service.price;
-      const amount = price*100;
+      console.log(service)
+      const ticketPrice = service.ticketPrice;
+      const amount = ticketPrice * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
-        payment_method_types:[card]
+        payment_method_types: ["card"],
       });
-      res.send({clientSecret: paymentIntent.client_secret})
-
-    })
-
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
     // add movie using react hook form form control and save to database
     app.post("/doctor", verifyJwt, verifyAdmin, async (req, res) => {
       const movie = req.body;
@@ -146,22 +145,19 @@ async function run() {
       return res.send({ success: true, result });
     });
 
-
     // get all new movies from the database
-    app.get('movies', verifyJwt, verifyAdmin, async (req, res) => {
-       const movies = await MovieServer.find().toArray();
-       res.send(movies)
-    })
-
+    app.get("movies", verifyJwt, verifyAdmin, async (req, res) => {
+      const movies = await MovieServer.find().toArray();
+      res.send(movies);
+    });
 
     // get id for payment system
-    app.get('/booking/:id', verifyJwt, async (req,res) =>{
+    app.get("/booking/:id", async (req, res) => {
       const id = req.params.id;
       const query = {_id: ObjectId(id)};
-      const book = await bookingCollection.findOne(query);
-      res.send(book);
-
-    })
+      const booking = await movieCollection.findOne(query);
+      res.send(booking);
+    });
   } finally {
     // await client.close();
   }
