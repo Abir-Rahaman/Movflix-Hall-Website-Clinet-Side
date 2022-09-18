@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const cors = require("cors");
 require("dotenv").config();
@@ -130,6 +130,23 @@ async function run() {
       const result = await MovieServer.insertOne(movie);
       return res.send({ success: true, result });
     });
+
+
+    // get all new movies from the database
+    app.get('movies', verifyJwt, verifyAdmin, async (req, res) => {
+       const movies = await MovieServer.find().toArray();
+       res.send(movies)
+    })
+
+
+    // get id for payment system
+    app.get('/booking/:id', verifyJwt, async (req,res) =>{
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const book = await bookingCollection.findOne(query);
+      res.send(book);
+
+    })
   } finally {
     // await client.close();
   }
