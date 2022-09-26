@@ -137,7 +137,7 @@ async function run() {
 
 
     // payment system integration
-    app.post('/create-payment-intent', verifyJWT, async(req, res) =>{
+    app.post('/create-payment-intent', async(req, res) =>{
       const service = req.body;
       const Ticket_Price = service.Ticket_Price;
       const amount = Ticket_Price*100;
