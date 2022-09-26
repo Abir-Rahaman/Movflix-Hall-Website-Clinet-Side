@@ -55,10 +55,17 @@ async function run() {
       res.send(movie);
     });
 
+    // upload new movie in cart
+    app.post("/movie", async (req, res) => {
+      const newMovie = req.body;
+      const movie = movieCollection.insertOne(newMovie);
+      res.send(movie);
+    });
+
     // post bookings to the booking collection
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
-      const query = { movieName: booking.movieName, selected: booking.selectedDate, email: booking.email ,ticketPrice:booking.ticketPrice };
+      const query = { Movie_Name: booking.Movie_Name };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
         return res.send({ success: false, booking: exists });
@@ -84,6 +91,14 @@ async function run() {
     app.get("/user", async (req, res) => {
       const users = await googleUsersCollection.find().toArray();
       res.send(users);
+    });
+
+    // delete admin by id
+    app.delete("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await googleUsersCollection.deleteOne(filter);
+      res.send(result);
     });
 
     // save all users from google accounts
@@ -120,19 +135,20 @@ async function run() {
       res.send({ admin: isAdmin });
     });
 
+
     // payment system integration
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post('/create-payment-intent', verifyJWT, async(req, res) =>{
       const service = req.body;
-      console.log(service)
-      const ticketPrice = service.ticketPrice;
-      const amount = ticketPrice * 100;
+      const Ticket_Price = service.Ticket_Price;
+      const amount = Ticket_Price*100;
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency: "usd",
-        payment_method_types: ["card"],
+        amount : amount,
+        currency: 'usd',
+        payment_method_types:['card']
       });
-      res.send({ clientSecret: paymentIntent.client_secret });
+      res.send({clientSecret: paymentIntent.client_secret})
     });
+    
     // add movie using react hook form form control and save to database
     app.post("/doctor", verifyJwt, verifyAdmin, async (req, res) => {
       const movie = req.body;
@@ -154,7 +170,7 @@ async function run() {
     // get id for payment system
     app.get("/booking/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
       const booking = await movieCollection.findOne(query);
       res.send(booking);
     });
