@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const app = express();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")('sk_test_51L18qLA4o5tgtQUC1uB9NDMgtflOI0Iggy0Nwf1DJo1PHjRMQ3gqBGfzAeOHh0M3aYXGGOOBjgIePEGBOHB9qSS200sMrmtmAU');
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -65,26 +65,17 @@ async function run() {
     // post bookings to the booking collection
     app.post("/bookings", async (req, res) => {
       const booking = req.body;
-      const query = { Movie_Name: booking.Movie_Name };
-      const exists = await bookingCollection.findOne(query);
-      if (exists) {
-        return res.send({ success: false, booking: exists });
-      }
       const result = await bookingCollection.insertOne(booking);
-      return res.send({ success: true, result });
+      return res.send(result);
     });
 
     // get all bookings
-    app.get("/bookings", verifyJwt, async (req, res) => {
+    app.get("/bookings", async (req, res) => {
       const email = req.query.email;
-      const decodedEmail = req.decoded.email;
-      if (email === decodedEmail) {
         const query = { email: email };
         const bookings = await bookingCollection.find(query).toArray();
         res.send(bookings);
-      } else {
-        return res.status(403).send({ message: "Forbidden Access " });
-      }
+
     });
 
     // get all users
@@ -117,7 +108,7 @@ async function run() {
     });
 
     // make admin api
-    app.put("/user/admin/:email", verifyJwt, verifyAdmin, async (req, res) => {
+    app.put("/user/admin/:email", async (req, res) => {
       const email = req.params.email;
       const filter = { email: email };
       const updateDoc = {
@@ -137,20 +128,20 @@ async function run() {
 
 
     // payment system integration
-    app.post('/create-payment-intent', async(req, res) =>{
-      const service = req.body;
-      const Ticket_Price = service.Ticket_Price;
-      const amount = Ticket_Price*100;
+    app.post('/create-payment-intent', async(req,res) =>{
+      const order = req.body;
+      const price = order.price;
+      const amount = price*100;
       const paymentIntent = await stripe.paymentIntents.create({
-        amount : amount,
-        currency: 'usd',
-        payment_method_types:['card']
-      });
-      res.send({clientSecret: paymentIntent.client_secret})
-    });
+       amount:amount,
+       currency : 'usd',
+       payment_method_types:['card']
+      })
+      res.send({clientSecret : paymentIntent.client_secret})
+   })
     
     // add movie using react hook form form control and save to database
-    app.post("/doctor", verifyJwt, verifyAdmin, async (req, res) => {
+    app.post("/booking", async (req, res) => {
       const movie = req.body;
       const query = { MovieName: movie.MovieName };
       const exists = await MovieServer.findOne(query);
@@ -162,7 +153,7 @@ async function run() {
     });
 
     // get all new movies from the database
-    app.get("movies", verifyJwt, verifyAdmin, async (req, res) => {
+    app.get("movies", async (req, res) => {
       const movies = await MovieServer.find().toArray();
       res.send(movies);
     });
