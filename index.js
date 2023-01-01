@@ -31,7 +31,7 @@ function verifyJwt(req, res, next) {
 
 async function run() {
   try {
-    await client.connect();
+  
     const movieCollection = client.db("CinemaHall").collection("Movies");
     const bookingCollection = client.db("CinemaHall").collection("Bookings");
     const googleUsersCollection = client.db("CinemaHall").collection("googleUsers");
